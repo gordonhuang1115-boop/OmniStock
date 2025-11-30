@@ -1,8 +1,4 @@
-
-import { GoogleGenAI } from "@google/genai";
 import { Product, InventoryRecord, Transaction, Warehouse } from "../types";
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 interface AnalysisContext {
   products: Product[];
@@ -32,18 +28,25 @@ export const analyzeInventory = async (context: AnalysisContext): Promise<string
       請使用繁體中文 (Traditional Chinese) 並以 Markdown 格式輸出。保持專業語氣。
     `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        systemInstruction: "你是一位專業的物流與庫存專家助手。",
-        temperature: 0.3,
-      }
+    const response = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt,
+        systemInstruction: "你是一位專業的物流與庫存專家助手。"
+      }),
     });
 
-    return response.text || "目前無法產生分析報告。";
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.text || "目前無法產生分析報告。";
   } catch (error) {
     console.error("Gemini analysis failed:", error);
-    return "連線 AI 服務失敗，請檢查 API Key 設定。";
+    return "連線 AI 服務失敗，請檢查後端服務是否啟動。";
   }
 };
